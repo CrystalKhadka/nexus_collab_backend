@@ -1,0 +1,492 @@
+const mongoose = require('mongoose');
+
+const userSchema = new mongoose.Schema({
+  firstName: {
+    type: String,
+    required: true,
+  },
+  lastName: {
+    type: String,
+    required: true,
+  },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+  },
+  password: {
+    type: String,
+    required: true,
+  },
+
+  phone: {
+    type: String,
+    default: null,
+  },
+
+  address: {
+    type: String,
+    default: null,
+  },
+
+  joinedProjects: [],
+
+  resetPasswordOTP: {
+    type: Number,
+    default: null,
+  },
+
+  resetPasswordExpires: {
+    type: Date,
+    default: null,
+  },
+});
+
+const User = mongoose.model('users', userSchema);
+
+module.exports = User;
+const mongoose = require('mongoose');
+
+const taskSchema = new mongoose.Schema({
+  project: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: 'projects',
+  },
+  list: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: 'lists',
+  },
+
+  name: {
+    type: String,
+    required: true,
+  },
+  description: {
+    type: String,
+    required: true,
+  },
+  index: {
+    type: Number,
+    required: true,
+  },
+  members: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'users',
+    },
+  ],
+
+  startDate: {
+    type: Date,
+    default: null,
+  },
+  endDate: {
+    type: Date,
+    default: null,
+  },
+  status: {
+    type: String,
+    default: 'pending',
+  },
+  priority: {
+    type: String,
+    default: 'low',
+  },
+  taskRequirements: [
+    {
+      type: String,
+    },
+  ],
+  taskProgress: {
+    type: Number,
+    default: 0,
+  },
+  taskCover: {
+    type: String,
+    default: null,
+  },
+  taskAttachments: [
+    {
+      type: String,
+    },
+  ],
+  comments: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'comments',
+    },
+  ],
+});
+
+const Task = mongoose.model('tasks', taskSchema);
+
+module.exports = Task;
+
+const mongoose = require('mongoose');
+
+const projectSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+  },
+  description: {
+    type: String,
+    required: true,
+  },
+  owner: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: 'users',
+  },
+
+  image: {
+    type: String,
+    default: null,
+  },
+
+  members: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'users',
+    },
+  ],
+  tasks: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'tasks',
+    },
+  ],
+  lists: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'lists',
+    },
+  ],
+  admin: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'users',
+    },
+  ],
+  invited: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'users',
+    },
+  ],
+  requests: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'users',
+    },
+  ],
+
+  chats: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'chats',
+  },
+
+  permissions: {
+    commenting: {
+      type: String,
+      default: 'all',
+    },
+    taskEditing: {
+      type: String,
+      default: 'all',
+    },
+    taskDeleting: {
+      type: String,
+      default: 'all',
+    },
+    taskAdding: {
+      type: String,
+      default: 'all',
+    },
+    listEditing: {
+      type: String,
+      default: 'all',
+    },
+    listDeleting: {
+      type: String,
+      default: 'all',
+    },
+    listAdding: {
+      type: String,
+      default: 'all',
+    },
+    listMoving: {
+      type: String,
+      default: 'all',
+    },
+    taskMoving: {
+      type: String,
+      default: 'all',
+    },
+    changePermissions: {
+      type: String,
+      default: 'all',
+    },
+    chat: {
+      type: String,
+      default: 'all',
+    },
+
+    channelCreation: {
+      type: String,
+      default: 'all',
+    },
+    timeline: {
+      type: String,
+      default: 'all',
+    },
+    calendar: {
+      type: String,
+      default: 'all',
+    },
+  },
+});
+
+const Project = mongoose.model('projects', projectSchema);
+
+module.exports = Project;
+
+const mongoose = require('mongoose');
+
+const notificationSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: 'users',
+  },
+  text: {
+    type: String,
+    required: true,
+  },
+  date: {
+    type: Date,
+    default: Date.now,
+  },
+  type: {
+    type: String,
+    required: true,
+  },
+});
+
+const Notification = mongoose.model('notifications', notificationSchema);
+
+module.exports = Notification;
+
+
+const mongoose = require('mongoose');
+
+const messageSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: 'users', // Reference the 'users' collection for the sender
+  },
+  text: {
+    type: String,
+    required: true,
+  },
+  date: {
+    type: Date,
+    default: Date.now,
+  },
+  type: {
+    type: String,
+    required: true,
+  },
+  isChannel: {
+    type: Boolean,
+    required: true,
+  },
+  receiver: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    refPath: 'receiverType', // Dynamic reference based on receiverType
+  },
+  receiverType: {
+    type: String,
+    required: true,
+    enum: ['users', 'channels'], // Specifies the collections that `receiver` can reference
+  },
+  whoRead: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'users',
+    },
+  ],
+});
+
+const Message = mongoose.model('messages', messageSchema);
+
+module.exports = Message;
+
+
+const mongoose = require('mongoose');
+
+const listSchema = new mongoose.Schema({
+  project: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: 'projects',
+  },
+  name: {
+    type: String,
+    required: true,
+  },
+  tasks: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'tasks',
+    },
+  ],
+  index: {
+    type: Number,
+    required: true,
+  },
+});
+
+const List = mongoose.model('lists', listSchema);
+
+module.exports = List;
+
+const mongoose = require('mongoose');
+
+const commentSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: 'users',
+  },
+  task: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: 'tasks',
+  },
+  text: {
+    type: String,
+    required: true,
+  },
+});
+
+const Comment = mongoose.model('comments', commentSchema);
+
+module.exports = Comment;
+
+
+const mongoose = require('mongoose');
+
+const chatSchema = new mongoose.Schema({
+  members: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'users',
+    },
+  ],
+  channel: {
+    type: String,
+    required: true,
+  },
+});
+
+const Chat = mongoose.model('chats', chatSchema);
+
+module.exports = Chat;
+
+
+const mongoose = require('mongoose');
+
+const channelSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+  },
+  members: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'users', // References the users who are members of the channel
+    },
+  ],
+  messages: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'messages', // References the messages sent in the channel
+    },
+  ],
+  newMessageReadBy: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'users', // References the users who have read the latest message
+    },
+  ],
+});
+
+const Channel = mongoose.model('Channel', channelSchema);
+
+module.exports = Channel;
+
+
+const mongoose = require('mongoose');
+
+const callSchema = new mongoose.Schema({
+  callType: {
+    type: String,
+    required: true,
+    enum: ['audio', 'video', 'screen-sharing'], // Add screen-sharing as a valid type
+  },
+  participants: [
+    {
+      userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        ref: 'users', // References the users participating in the call
+      },
+      joinedAt: {
+        type: Date, // Timestamp when the participant joined the call
+      },
+      leftAt: {
+        type: Date, // Timestamp when the participant left the call
+      },
+    },
+  ],
+  host: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: 'users', // The user who initiated the call
+  },
+  sharedScreenBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'users', // References the user currently sharing their screen
+  },
+  status: {
+    type: String,
+    required: true,
+    enum: ['ongoing', 'completed', 'missed', 'cancelled'], // Call statuses
+    default: 'ongoing',
+  },
+  startedAt: {
+    type: Date,
+    default: Date.now, // Timestamp when the call started
+  },
+  endedAt: {
+    type: Date, // Timestamp when the call ended
+  },
+  metadata: {
+    sessionId: {
+      type: String, // WebRTC session identifier
+      required: true,
+    },
+    signalingServer: {
+      type: String, // URL of the WebRTC signaling server
+    },
+  },
+});
+
+const Call = mongoose.model('Call', callSchema);
+
+module.exports = Call;
