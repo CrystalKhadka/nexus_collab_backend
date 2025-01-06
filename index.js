@@ -42,6 +42,8 @@ app.get('/test', (req, res) => {
 // Configuring Routes of User
 app.use('/api/user', require('./routes/userRoutes'));
 app.use('/api/project', require('./routes/projectRoutes'));
+app.use('/api/list', require('./routes/listRoutes'));
+app.use('/api/task', require('./routes/taskRoutes'));
 
 // http://localhost:5000/api/user
 // http://localhost:5000/test

@@ -226,9 +226,10 @@ const verifyOTP = async (req, res) => {
         id: user._id,
         email: user.email,
       },
+      // expires in 1 week
       process.env.JWT_SECRET,
       {
-        expiresIn: '1h',
+        expiresIn: '7d',
       }
     );
 

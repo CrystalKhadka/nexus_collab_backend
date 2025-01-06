@@ -18,7 +18,7 @@ const taskSchema = new mongoose.Schema({
   },
   description: {
     type: String,
-    required: true,
+    default: null,
   },
   index: {
     type: Number,
@@ -61,6 +61,11 @@ const taskSchema = new mongoose.Schema({
     default: null,
   },
   taskAttachments: [
+    {
+      type: String,
+    },
+  ],
+  taskLabel: [
     {
       type: String,
     },

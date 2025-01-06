@@ -130,7 +130,11 @@ const getMyProjects = async (req, res) => {
 
 const getProjectById = async (req, res) => {
   try {
-    const project = await projectModel.findById(req.params.id);
+    const project = await projectModel
+      .findById(req.params.id)
+      .populate('members', 'firstName lastName email')
+      .populate('owner', 'firstName lastName email')
+      .populate('lists');
     res
       .status(200)
       .json({ success: true, message: 'Project fetched', data: project });
@@ -157,10 +161,47 @@ const getJoinedProjects = async (req, res) => {
   }
 };
 
+const addListToProject = async (req, res) => {
+  try {
+    const project = await projectModel.findById(req.params.id);
+    project.lists.push(req.body.listId);
+    await project.save();
+    res.status(200).json({ success: true, data: project });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+const inviteMember = async (req, res) => {
+  try {
+    const project = await projectModel.findById(req.params.id);
+    project.members.push(req.body.userId);
+    await project.save();
+    res.status(200).json({ success: true, data: project });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+const removeMember = async (req, res) => {
+  try {
+    const project = await projectModel.findById(req.params.id);
+    project.members.pull(req.body.userId);
+    await project.save();
+    res.status(200).json({ success: true, data: project });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
 module.exports = {
   createProject,
   uploadImage,
   getMyProjects,
   getProjectById,
   getJoinedProjects,
+  addListToProject,
 };

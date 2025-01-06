@@ -18,4 +18,6 @@ router.get(
   projectController.getJoinedProjects
 );
 
+router.put('/add_list/:id', authGuard, projectController.addListToProject);
+
 module.exports = router;
