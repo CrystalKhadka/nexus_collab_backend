@@ -5,12 +5,11 @@ const channelSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  members: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'users', // References the users who are members of the channel
-    },
-  ],
+  project: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: 'projects',
+  },
   messages: [
     {
       type: mongoose.Schema.Types.ObjectId,
@@ -25,6 +24,6 @@ const channelSchema = new mongoose.Schema({
   ],
 });
 
-const Channel = mongoose.model('Channel', channelSchema);
+const Channel = mongoose.model('channels', channelSchema);
 
 module.exports = Channel;

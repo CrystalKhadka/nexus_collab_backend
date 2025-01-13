@@ -1,80 +1,74 @@
 const projectModel = require('../models/projectModel');
 const path = require('path');
 const fs = require('fs');
+const userModel = require('../models/userModel');
+const sendProjectInviteEmail = require('../services/sentProjectInvite');
+const jwt = require('jsonwebtoken');
+
+// Permission check helper function
+const checkPermissions = (project, user) => {
+  if (project.owner.toString() === user.id) {
+    return 'owner';
+  } else if (project.admin.includes(user.id)) {
+    return 'admin';
+  } else if (project.members.includes(user.id)) {
+    return 'all';
+  }
+  return 'none';
+};
 
 const uploadImage = async (req, res) => {
-  // Check incoming data
-  console.log(req.body);
-
-  const { projectImage } = req.files;
-  // Check if file is present
-  if (!projectImage) {
-    return res.status(400).json({
-      success: false,
-      message: 'File not found',
-    });
-  }
-
-  // Check if file is an image
-  if (!projectImage.mimetype.startsWith('image')) {
-    return res.status(400).json({
-      success: false,
-      message: 'Please upload an image file',
-    });
-  }
-
-  // Check file size
-  if (projectImage.size > process.env.MAX_FILE_UPLOAD) {
-    return res.status(400).json({
-      success: false,
-      message: `Please upload an image less than ${process.env.MAX_FILE_UPLOAD}`,
-    });
-  }
-
-  //  Upload the image
-  // 1. Generate new image name
-  const userId = req.user.id;
-
-  const imageName = `${Date.now()}-${userId}-${projectImage.name}`;
-
-  // 2. Make a upload path (/path/upload - directory)
-  const imageUploadPath = path.join(
-    __dirname,
-    `../public/projects/${imageName}`
-  );
-
-  // Ensure the directory exists
-  const directoryPath = path.dirname(imageUploadPath);
-  fs.mkdirSync(directoryPath, { recursive: true });
-
   try {
-    // 3. Move the image to the upload path
-    projectImage.mv(imageUploadPath);
+    const { projectImage } = req.files;
+    if (!projectImage) {
+      return res.status(400).json({
+        success: false,
+        message: 'File not found',
+      });
+    }
 
-    //  send image name to the user
+    if (!projectImage.mimetype.startsWith('image')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please upload an image file',
+      });
+    }
+
+    if (projectImage.size > process.env.MAX_FILE_UPLOAD) {
+      return res.status(400).json({
+        success: false,
+        message: `Please upload an image less than ${process.env.MAX_FILE_UPLOAD}`,
+      });
+    }
+
+    const userId = req.user.id;
+    const imageName = `${Date.now()}-${userId}-${projectImage.name}`;
+    const imageUploadPath = path.join(
+      __dirname,
+      `../public/projects/${imageName}`
+    );
+    const directoryPath = path.dirname(imageUploadPath);
+
+    fs.mkdirSync(directoryPath, { recursive: true });
+    await projectImage.mv(imageUploadPath);
+
     res.status(200).json({
       success: true,
       message: 'Image uploaded successfully',
       image: imageName,
     });
   } catch (error) {
-    console.log(error);
-    return res.status(500).json({
+    console.error(error);
+    res.status(500).json({
       success: false,
       message: 'Internal Server Error',
-      error: error,
     });
   }
 };
 
 const createProject = async (req, res) => {
-  // Check incoming data
-  console.log(req.body);
-
-  // destructuring
   const { projectName, projectDescription, projectImage } = req.body;
 
-  // Validate data
   if (!projectName || !projectDescription) {
     return res.status(400).json({
       success: false,
@@ -82,7 +76,6 @@ const createProject = async (req, res) => {
     });
   }
 
-  // Project name length
   if (projectName.length < 3) {
     return res.status(400).json({
       success: false,
@@ -91,7 +84,6 @@ const createProject = async (req, res) => {
   }
 
   try {
-    // Create project
     const project = await projectModel.create({
       name: projectName,
       description: projectDescription,
@@ -101,14 +93,13 @@ const createProject = async (req, res) => {
       admin: [req.user.id],
     });
 
-    // Send response
     res.status(201).json({
       success: true,
       message: 'Project created successfully',
       data: project,
     });
   } catch (error) {
-    console.log(error);
+    console.error(error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -119,12 +110,17 @@ const createProject = async (req, res) => {
 const getMyProjects = async (req, res) => {
   try {
     const projects = await projectModel.find({ owner: req.user.id });
-    res
-      .status(200)
-      .json({ success: true, message: 'Projects fetched', data: projects });
+    res.status(200).json({
+      success: true,
+      message: 'Projects fetched',
+      data: projects,
+    });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
   }
 };
 
@@ -132,65 +128,414 @@ const getProjectById = async (req, res) => {
   try {
     const project = await projectModel
       .findById(req.params.id)
-      .populate('members', 'firstName lastName email')
-      .populate('owner', 'firstName lastName email')
+      .populate('members', 'firstName lastName email image')
+      .populate('owner', 'firstName lastName email image')
       .populate('lists');
-    res
-      .status(200)
-      .json({ success: true, message: 'Project fetched', data: project });
+
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: 'Project not found',
+      });
+    }
+
+    const role = checkPermissions(project, req.user);
+    if (role === 'none' && project.isPrivate) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to view this project',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Project fetched',
+      data: project,
+    });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
   }
 };
 
 const getJoinedProjects = async (req, res) => {
   try {
-    // Fetch projects where the user is a member but not the owner
     const projects = await projectModel.find({
       members: req.user.id,
-      owner: { $ne: req.user.id }, // Exclude projects where the user is the owner
+      owner: { $ne: req.user.id },
     });
 
-    res
-      .status(200)
-      .json({ success: true, message: 'Projects fetched', data: projects });
+    res.status(200).json({
+      success: true,
+      message: 'Projects fetched',
+      data: projects,
+    });
   } catch (error) {
-    console.error(error); // Log the error for debugging
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
   }
 };
 
 const addListToProject = async (req, res) => {
   try {
     const project = await projectModel.findById(req.params.id);
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: 'Project not found',
+      });
+    }
+
+    const role = checkPermissions(project, req.user);
+    if (role === 'none') {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to modify this project',
+      });
+    }
+
+    const listPermission = project.permissions.listAdding;
+    if (listPermission === 'Admin' && role !== 'admin' && role !== 'owner') {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to add lists',
+      });
+    }
+
     project.lists.push(req.body.listId);
     await project.save();
     res.status(200).json({ success: true, data: project });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
   }
 };
 
-const inviteMember = async (req, res) => {
+const sendInvite = async (req, res) => {
   try {
-    const project = await projectModel.findById(req.params.id);
-    project.members.push(req.body.userId);
+    const project = await projectModel.findById(req.body.id);
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: 'Project not found',
+      });
+    }
+
+    const role = checkPermissions(project, req.user);
+    if (
+      role === 'none' ||
+      (role === 'all' && project.permissions.inviteMembers === 'Admin')
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to invite members',
+      });
+    }
+
+    if (project.members.includes(req.body.userId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'User is already a member of the project',
+      });
+    }
+
+    if (project.invited.includes(req.body.userId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'User is already invited to the project',
+      });
+    }
+
+    const inviteUser = await userModel.findById(req.body.userId);
+    if (!inviteUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    const inviteToken = jwt.sign(
+      { userId: inviteUser.id, projectId: project._id },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    const emailResponse = await sendProjectInviteEmail({
+      email: inviteUser.email,
+      projectName: project.name,
+      invitedBy: req.user.firstName,
+      inviteLink: 'http://localhost:3000/invitations',
+    });
+
+    if (!emailResponse) {
+      return res.status(400).json({
+        success: false,
+        message: 'Failed to send invite email',
+      });
+    }
+
+    project.invited.push(req.body.userId);
     await project.save();
-    res.status(200).json({ success: true, data: project });
+
+    res.status(200).json({
+      success: true,
+      data: project,
+    });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+};
+
+const acceptInvite = async (req, res) => {
+  try {
+    const project = await projectModel.findById(req.body.projectId);
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: 'Project not found',
+      });
+    }
+
+    if (project.members.includes(req.user.id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'You are already a member of this project',
+      });
+    }
+
+    if (!project.invited.includes(req.user.id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'You are not invited to this project',
+      });
+    }
+
+    project.members.push(req.user.id);
+    project.invited.pull(req.user.id);
+    await project.save();
+
+    res.status(200).json({
+      success: true,
+      data: project,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
   }
 };
 
 const removeMember = async (req, res) => {
   try {
     const project = await projectModel.findById(req.params.id);
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: 'Project not found',
+      });
+    }
+
+    const role = checkPermissions(project, req.user);
+    if (role !== 'owner' && role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to remove members',
+      });
+    }
+
+    // Prevent removing the owner
+    if (project.owner.toString() === req.body.userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot remove the project owner',
+      });
+    }
+
     project.members.pull(req.body.userId);
+    project.admin.pull(req.body.userId);
+    await project.save();
+
+    res.status(200).json({
+      success: true,
+      data: project,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+};
+
+const updateProject = async (req, res) => {
+  const { name, permissions, isPrivate } = req.body;
+
+  try {
+    const project = await projectModel.findById(req.params.id);
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: 'Project not found',
+      });
+    }
+
+    const role = checkPermissions(project, req.user);
+    if (role !== 'owner' && role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to update this project',
+      });
+    }
+
+    // Only owner can change permissions
+    if (permissions && role !== 'owner') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only the project owner can change permissions',
+      });
+    }
+
+    if (name) project.name = name;
+    if (permissions) project.permissions = permissions;
+    if (typeof isPrivate !== 'undefined') project.isPrivate = isPrivate;
+
+    await project.save();
+    res.status(200).json({
+      success: true,
+      data: project,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+};
+
+const deleteProject = async (req, res) => {
+  try {
+    const project = await projectModel.findById(req.params.id);
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: 'Project not found',
+      });
+    }
+
+    const role = checkPermissions(project, req.user);
+    if (role !== 'owner') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only the project owner can delete the project',
+      });
+    }
+
+    await projectModel.findByIdAndDelete(req.params.id);
+    res.status(200).json({
+      success: true,
+      message: 'Project deleted',
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+};
+
+const getInvitesByUserId = async (req, res) => {
+  try {
+    const invites = await projectModel.find({
+      invited: req.user.id,
+      owner: { $ne: req.user.id },
+      members: { $ne: req.user.id },
+      admin: { $ne: req.user.id },
+    });
+    res
+      .status(200)
+      .json({ success: true, message: 'Invites fetched', data: invites });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+const rejectInvite = async (req, res) => {
+  try {
+    const project = await projectModel.findById(req.params.id);
+    project.invited.pull(req.user.id);
     await project.save();
     res.status(200).json({ success: true, data: project });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+const searchProjects = async (req, res) => {
+  try {
+    const search = req.query.search || '';
+    const projects = await projectModel.find({
+      name: { $regex: search, $options: 'i' },
+    });
+    res.status(200).json({ success: true, projects: projects });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// search_member
+const searchMemberInProjectApi = async (req, res) => {
+  const search = req.query.search || '';
+
+  const projectId = req.query.id;
+  try {
+    const project = await projectModel.findById(projectId);
+    const members = await userModel
+      .find({
+        email: { $regex: search, $options: 'i' },
+        _id: { $in: (project.members || []).concat(project.admin) },
+      })
+      .select('-password');
+    res.status(200).json({ success: true, data: members });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// get members
+const getMembers = async (req, res) => {
+  const projectId = req.params.id;
+
+  try {
+    const project = await projectModel
+      .findById(projectId)
+      .populate('members', 'firstName lastName email image')
+      .populate('admin', 'firstName lastName email image');
+    // Filter me
+    const members = project.members;
+
+    res.status(200).json({ success: true, data: members });
   } catch (error) {
     console.log(error);
     res.status(500).json({ success: false, message: 'Internal server error' });
@@ -204,4 +549,15 @@ module.exports = {
   getProjectById,
   getJoinedProjects,
   addListToProject,
+  removeMember,
+  sendInvite,
+  acceptInvite,
+  updateProject,
+  deleteProject,
+  checkPermissions,
+  getInvitesByUserId,
+  rejectInvite,
+  searchProjects,
+  searchMemberInProjectApi,
+  getMembers,
 };

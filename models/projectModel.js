@@ -62,6 +62,11 @@ const projectSchema = new mongoose.Schema({
     ref: 'chats',
   },
 
+  isPrivate: {
+    type: Boolean,
+    default: false,
+  },
+
   permissions: {
     commenting: {
       type: String,

@@ -20,4 +20,39 @@ router.get(
 
 router.put('/add_list/:id', authGuard, projectController.addListToProject);
 
+// send invite
+router.put('/send_invite', authGuard, projectController.sendInvite);
+
+// accept invite
+router.put('/accept_invite', authGuard, projectController.acceptInvite);
+
+// get invited projects
+router.get(
+  '/get_invited_projects',
+  authGuard,
+  projectController.getInvitesByUserId
+);
+
+// reject invite
+router.put('/reject_invite/:id', authGuard, projectController.rejectInvite);
+
+// search projects
+router.get('/search', authGuard, projectController.searchProjects);
+
+// update project
+router.put('/update/:id', authGuard, projectController.updateProject);
+
+// delete project
+router.delete('/delete/:id', authGuard, projectController.deleteProject);
+
+// searchMemberInProjectApi
+router.get(
+  '/search_member',
+  authGuard,
+  projectController.searchMemberInProjectApi
+);
+
+// getMembers
+router.get('/get_members/:id', authGuard, projectController.getMembers);
+
 module.exports = router;

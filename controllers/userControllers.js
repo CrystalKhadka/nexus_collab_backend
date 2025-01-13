@@ -357,7 +357,7 @@ const loginUser = async (req, res) => {
       },
       process.env.JWT_SECRET,
       {
-        expiresIn: '1h',
+        expiresIn: '7d',
       }
     );
 
@@ -380,10 +380,37 @@ const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000);
 };
 
+const searchUser = async (req, res) => {
+  try {
+    const search = req.query.search || '';
+    const me = req.user.id;
+    const users = await userModel.find({
+      email: { $regex: search, $options: 'i' },
+      _id: { $ne: me },
+    });
+    res.status(200).json({ success: true, data: users });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+const getMe = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.user.id);
+    res.status(200).json({ success: true, user: user });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
 // Exporting
 module.exports = {
   createUser,
   sentVerificationEmail,
   verifyOTP,
   loginUser,
+  searchUser,
+  getMe,
 };
