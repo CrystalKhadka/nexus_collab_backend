@@ -55,4 +55,11 @@ router.get(
 // getMembers
 router.get('/get_members/:id', authGuard, projectController.getMembers);
 
+// getMembersRoleAndTask
+router.get(
+  '/get_members_role_task/:id',
+  authGuard,
+  projectController.getMembersRoleAndTask
+);
+
 module.exports = router;

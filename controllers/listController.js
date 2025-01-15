@@ -281,6 +281,44 @@ const addTaskToList = async (listId, taskId) => {
   }
 };
 
+// Move List index
+const moveList = async (req, res) => {
+  try {
+    const list = await List.findById(req.params.id);
+    if (!list) {
+      return res.status(404).json({
+        success: false,
+        message: 'List not found',
+      });
+    }
+    const listIndex = list.index;
+    list.index = req.body.index;
+    await list.save();
+    res.status(200).json({ success: true, data: list,message: `List moved from ${listIndex} to ${req.body.index}` });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+const changeListName = async (req, res) => {
+  try {
+    const list = await List.findById(req.params.id);
+    if (!list) {
+      return res.status(404).json({
+        success: false,
+        message: 'List not found',
+      });
+    }
+    list.name = req.body.name;
+    await list.save();
+    res.status(200).json({ success: true, data: list });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
 module.exports = {
   createList,
   getLists,
@@ -290,4 +328,6 @@ module.exports = {
   removeTaskFromList,
   editList,
   deleteList,
+  moveList,
+  changeListName,
 };

@@ -49,7 +49,8 @@ const taskSchema = new mongoose.Schema({
   },
   taskRequirements: [
     {
-      type: String,
+      text: String,
+      completed: Boolean,
     },
   ],
   taskProgress: {
@@ -67,7 +68,8 @@ const taskSchema = new mongoose.Schema({
   ],
   taskLabel: [
     {
-      type: String,
+      name: String,
+      color: String,
     },
   ],
   comments: [

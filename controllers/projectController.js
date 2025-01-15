@@ -4,9 +4,10 @@ const fs = require('fs');
 const userModel = require('../models/userModel');
 const sendProjectInviteEmail = require('../services/sentProjectInvite');
 const jwt = require('jsonwebtoken');
+const taskModel = require('../models/taskModel');
 
 // Permission check helper function
-const checkPermissions = (project, user) => {
+const checkPermissions = async (project, user) => {
   if (project.owner.toString() === user.id) {
     return 'owner';
   } else if (project.admin.includes(user.id)) {
@@ -542,6 +543,63 @@ const getMembers = async (req, res) => {
   }
 };
 
+const getMembersRoleAndTask = async (req, res) => {
+  const projectId = req.params.id;
+
+  try {
+    // Fetch project with members' basic details
+    const project = await projectModel
+      .findById(projectId)
+      .populate('members', 'firstName lastName email image');
+
+    if (!project) {
+      return res
+        .status(404)
+        .json({ success: false, message: 'Project not found' });
+    }
+
+    const members = project.members;
+
+    // Fetch all tasks for this project in a single query
+    const tasks = await taskModel.find({ project: projectId }).populate('list');
+
+    // Map tasks to members
+    const membersWithDetails = await Promise.all(
+      members.map(async (member) => {
+        const role = await getRole(project, member); // Get role
+        const assignedTasks = tasks.filter((task) =>
+          task.members.includes(member._id)
+        ); // Filter tasks for this member
+
+        return {
+          ...member.toObject(),
+          role,
+          tasks: assignedTasks,
+        };
+      })
+    );
+
+    res.status(200).json({ success: true, data: membersWithDetails });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+const getRole = async (project, member) => {
+  if (project.admin.includes(member._id)) {
+    return 'admin';
+  }
+  if (project.owner === member._id) {
+    return 'owner';
+  }
+  //
+  if (project.members.some((m) => m._id.equals(member._id))) {
+    return 'member';
+  }
+  return 'none';
+};
+
 module.exports = {
   createProject,
   uploadImage,
@@ -560,4 +618,5 @@ module.exports = {
   searchProjects,
   searchMemberInProjectApi,
   getMembers,
+  getMembersRoleAndTask,
 };
