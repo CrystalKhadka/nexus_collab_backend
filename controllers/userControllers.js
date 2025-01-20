@@ -3,6 +3,8 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const sendVerificationEmail = require('../services/sentVerficationEmail');
 const userSchema = require('../models/userModel');
+const path = require('path');
+const fs = require('fs');
 
 const createUser = async (req, res) => {
   // 1. Check incoming data
@@ -405,6 +407,123 @@ const getMe = async (req, res) => {
   }
 };
 
+const uploadProfilePic = async (req, res) => {
+  // 1. Check incoming data
+  console.log(req.body);
+
+  // destructuring
+  const { profilePic } = req.files;
+
+  // Validate data
+  if (!profilePic) {
+    return res.status(400).json({
+      success: false,
+      message: 'Profile picture is required',
+    });
+  }
+
+  // Check if its an image
+  if (
+    profilePic.mimetype !== 'image/jpeg' &&
+    profilePic.mimetype !== 'image/png' &&
+    profilePic.mimetype !== 'image/jpg'
+  ) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid file format',
+    });
+  }
+
+  // Check file size
+  if (profilePic.size > 1024 * 1024) {
+    return res.status(400).json({
+      success: false,
+      message: 'File size should be less than 1MB',
+    });
+  }
+
+  try {
+    const user = await userModel.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    // generate imageName
+    const imageName = `${Date.now()}-${user._id}-${
+      profilePic.name.split('.')[0]
+    }`;
+    const imagePath = path.join(__dirname, '../public/profilePic/', imageName);
+
+    // save image
+    await profilePic.mv(imagePath);
+
+    // send response
+    return res.status(200).json({
+      success: true,
+      message: 'Profile picture uploaded successfully',
+      profilePic: imageName,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+};
+
+const updateUser = async (req, res) => {
+  // Check incoming data
+  const { fullName, profilePic, address, phone } = req.body;
+  try {
+    const user = await userModel.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    // Destructuring the full_name
+    const nameArray = fullName.split(' ');
+    if (nameArray.length < 2) {
+      return res.status(400).json({
+        success: false,
+        message: 'Full name must be at least 2 words',
+      });
+    }
+
+    console.log(nameArray);
+    const first_name = nameArray[0];
+    const middle_name = nameArray.length > 2 ? nameArray[1] : null;
+    const last_name = nameArray[nameArray.length - 1];
+
+    user.firstName = first_name || user.firstName;
+    user.middleName = middle_name || user.middleName;
+    user.lastName = last_name || user.lastName;
+    user.image = profilePic || user.image;
+    user.address = address || user.address;
+    user.phone = phone || user.phone;
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'User updated successfully',
+      user: user,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+};
+
 // Exporting
 module.exports = {
   createUser,
@@ -413,4 +532,6 @@ module.exports = {
   loginUser,
   searchUser,
   getMe,
+  uploadProfilePic,
+  updateUser,
 };

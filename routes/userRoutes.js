@@ -13,4 +13,10 @@ router.get('/search', authGuard, userController.searchUser);
 
 router.get('/me', authGuard, userController.getMe);
 
+// upload profile pic
+router.post('/upload_profile_pic', authGuard, userController.uploadProfilePic);
+
+// update user
+router.put('/update', authGuard, userController.updateUser);
+
 module.exports = router;
