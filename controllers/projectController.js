@@ -600,6 +600,61 @@ const getRole = async (project, member) => {
   return 'none';
 };
 
+const requestAccess = async (req, res) => {
+  try {
+    const project = await projectModel.findById(req.params.id);
+
+    // if the user is already a member
+    if (project.members.includes(req.user.id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'You are already a member of this project',
+      });
+    }
+
+    // if the user is invited
+    if (project.invited.includes(req.user.id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'You are already invited to this project',
+      });
+    }
+
+    //if the user is pending
+    if (project.requests.includes(req.user.id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'You are already pending for this project',
+      });
+    }
+    project.requests.push(req.user.id);
+    await project.save();
+    res.status(200).json({ success: true, data: project });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+const fetchRequestedMembers = async (req, res) => {
+  try {
+    const project = await projectModel
+      .findById(req.params.id)
+      .populate('requests');
+
+    if (!project) {
+      return res
+        .status(404)
+        .json({ success: false, message: 'Project not found' });
+    }
+
+    res.status(200).json({ success: true, data: project.requests });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
 module.exports = {
   createProject,
   uploadImage,
@@ -619,4 +674,6 @@ module.exports = {
   searchMemberInProjectApi,
   getMembers,
   getMembersRoleAndTask,
+  requestAccess,
+  fetchRequestedMembers,
 };

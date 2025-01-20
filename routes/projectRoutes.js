@@ -62,4 +62,14 @@ router.get(
   projectController.getMembersRoleAndTask
 );
 
+// requestAccess
+router.put('/request_access/:id', authGuard, projectController.requestAccess);
+
+// fetchRequestedMembers
+router.get(
+  '/fetch_requested_members/:id',
+  authGuard,
+  projectController.fetchRequestedMembers
+);
+
 module.exports = router;

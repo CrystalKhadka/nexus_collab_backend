@@ -19,4 +19,19 @@ router.post('/upload_profile_pic', authGuard, userController.uploadProfilePic);
 // update user
 router.put('/update', authGuard, userController.updateUser);
 
+// sendForgotPasswordEmail
+router.put(
+  '/send_forgot_password_email',
+  userController.sendForgotPasswordEmail
+);
+
+// verifyForgotPasswordOTP
+router.put(
+  '/verify_forgot_password_otp',
+  userController.verifyForgotPasswordOTP
+);
+
+// resetPassword
+router.put('/reset_password', userController.resetPassword);
+
 module.exports = router;

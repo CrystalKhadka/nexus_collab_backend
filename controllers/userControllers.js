@@ -5,6 +5,7 @@ const sendVerificationEmail = require('../services/sentVerficationEmail');
 const userSchema = require('../models/userModel');
 const path = require('path');
 const fs = require('fs');
+const sendPasswordResetEmail = require('../services/sendForgotPassEmail');
 
 const createUser = async (req, res) => {
   // 1. Check incoming data
@@ -524,6 +525,109 @@ const updateUser = async (req, res) => {
   }
 };
 
+const sendForgotPasswordEmail = async (req, res) => {
+  // Check incoming data
+  const { email } = req.body;
+  try {
+    const user = await userModel.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+    const otp = Math.floor(100000 + Math.random() * 900000);
+    const otpExpires = Date.now() + 10 * 60 * 1000;
+
+    const sent = await sendPasswordResetEmail(email, otp);
+
+    if (!sent) {
+      return res.status(500).json({
+        success: false,
+        message: 'Email could not be sent',
+      });
+    }
+
+    user.otp = otp;
+    user.otpExpires = otpExpires;
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Email sent successfully',
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+};
+
+const verifyForgotPasswordOTP = async (req, res) => {
+  // Check incoming data
+  const { email, otp } = req.body;
+  try {
+    const user = await userModel.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    if (user.otp !== parseInt(otp) || user.otpExpires < Date.now()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid OTP',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'OTP verified successfully',
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  // Check incoming data
+  const { email, password } = req.body;
+  try {
+    const user = await userModel.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    user.password = hashedPassword;
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Password reset successfully',
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+};
+
 // Exporting
 module.exports = {
   createUser,
@@ -534,4 +638,7 @@ module.exports = {
   getMe,
   uploadProfilePic,
   updateUser,
+  sendForgotPasswordEmail,
+  resetPassword,
+  verifyForgotPasswordOTP,
 };
