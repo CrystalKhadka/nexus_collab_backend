@@ -1,6 +1,7 @@
 const messageModel = require('../models/messageModel');
 const userModel = require('../models/userModel');
 const channelModel = require('../models/channelModel');
+const notificationModel = require('../models/notificationModel');
 const path = require('path');
 const fs = require('fs');
 
@@ -29,14 +30,6 @@ const sendMessage = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'User not found',
-      });
-    }
-
-    //   check if the message text is in the enum
-    if (!['text', 'image', 'video', 'file'].includes(type)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid message type',
       });
     }
 
@@ -89,19 +82,11 @@ const sendMessageToChannel = async (req, res) => {
 
   try {
     //   check if the channel exists
-    const channel = await channelModel.findById(channelId);
+    const channel = await channelModel.findById(channelId).populate('project');
     if (!channel) {
       return res.status(404).json({
         success: false,
         message: 'Channel not found',
-      });
-    }
-
-    //   check if the message text is in the enum
-    if (!['text', 'image', 'video', 'file'].includes(type)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid message type',
       });
     }
 
@@ -114,6 +99,21 @@ const sendMessageToChannel = async (req, res) => {
       whoRead: [sender],
     });
     await message.save();
+
+    //  send notification to all members of the channel
+    const members = channel.project.members.map((member) =>
+      member._id.toString()
+    );
+    for (let i = 0; i < members.length; i++) {
+      const member = members[i];
+      const notification = new notificationModel({
+        sender,
+        text: `New message in ${channel.name}`,
+        recipient: member,
+        type: 'message',
+      });
+      await notification.save();
+    }
 
     message = await messageModel
       .findById(message._id)
@@ -158,13 +158,6 @@ const uploadFile = async (req, res) => {
   const fileType = file.mimetype.split('/')[0];
 
   console.log(fileType);
-
-  if (fileType !== 'image' || fileType !== 'video' || fileType !== 'file') {
-    return res.status(400).json({
-      success: false,
-      message: 'Invalid file type',
-    });
-  }
 
   try {
     //   get new file name

@@ -440,7 +440,8 @@ const deleteProject = async (req, res) => {
       });
     }
 
-    const role = checkPermissions(project, req.user);
+    const role = await checkPermissions(project, req.user);
+    console.log(role);
     if (role !== 'owner') {
       return res.status(403).json({
         success: false,

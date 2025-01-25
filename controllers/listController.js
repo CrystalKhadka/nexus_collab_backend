@@ -1,5 +1,6 @@
 const List = require('../models/listModel');
 const Project = require('../models/projectModel');
+const Task = require('../models/taskModel');
 const { checkPermissions } = require('./projectController');
 
 const createList = async (req, res) => {
@@ -261,7 +262,17 @@ const deleteList = async (req, res) => {
       });
     }
 
-    await list.remove();
+    for (let i = 0; i < list.tasks.length; i++) {
+      await Task.findByIdAndDelete(list.tasks[i]);
+    }
+
+    // Remove list from project
+    project.lists.pull(list._id);
+    await project.save();
+
+    // Remove list
+    await List.findByIdAndDelete(req.params.id);
+
     res.status(200).json({ success: true, data: list });
   } catch (error) {
     console.error(error);
@@ -294,7 +305,11 @@ const moveList = async (req, res) => {
     const listIndex = list.index;
     list.index = req.body.index;
     await list.save();
-    res.status(200).json({ success: true, data: list,message: `List moved from ${listIndex} to ${req.body.index}` });
+    res.status(200).json({
+      success: true,
+      data: list,
+      message: `List moved from ${listIndex} to ${req.body.index}`,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: 'Server error' });

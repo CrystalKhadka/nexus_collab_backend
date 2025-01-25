@@ -56,6 +56,8 @@ app.get('/api/socket/getOnlineUsers', (req, res) => {
   res.status(200).json({ success: true, data: users });
 });
 
+app.use('/api/notification', require('./routes/notificationRoutes'));
+
 app.use('/api/call', require('./routes/callRoutes'));
 
 // http://localhost:5000/api/user

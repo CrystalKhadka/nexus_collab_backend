@@ -51,4 +51,10 @@ router.put(
 // changeTaskStatus
 router.put('/change_status/:id', authGuard, taskController.changeTaskStatus);
 
+// moveTaskFromList
+router.put('/move/:id', authGuard, taskController.moveTaskFromList);
+
+// joinOrLeaveTask
+router.put('/join_or_leave/:id', authGuard, taskController.joinOrLeaveTask);
+
 module.exports = router;

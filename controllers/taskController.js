@@ -6,6 +6,7 @@ const List = require('../models/listModel');
 const path = require('path');
 const fs = require('fs');
 const sharp = require('sharp');
+const notificationModel = require('../models/notificationModel');
 
 const createTask = async (req, res) => {
   const { name, index, listId, projectId } = req.body;
@@ -203,6 +204,7 @@ const changeTaskDesc = async (req, res) => {
 
     res.status(200).json({
       success: true,
+      message: 'Task description updated successfully',
       data: task,
     });
   } catch (error) {
@@ -352,9 +354,23 @@ const assignTask = async (req, res) => {
       await task.save();
     }
 
+    // Send notification to the user
+    const notification = new notificationModel({
+      sender: req.user.id,
+      text: `You have been assigned a task: ${task.name}`,
+      recipient: userId,
+      type: 'task',
+    });
+
+    await notification.save();
+
+    // updated task
+    const updatedTask = await Task.findById(req.params.id).populate('members');
+
     res.status(200).json({
       success: true,
-      data: task,
+      message: 'Task assigned successfully',
+      data: updatedTask,
     });
   } catch (error) {
     console.error(error);
@@ -909,6 +925,7 @@ const moveTaskFromList = async (req, res) => {
     await list.save();
 
     task.list = req.body.listId;
+
     await task.save();
     res.status(200).json({
       success: true,
@@ -924,7 +941,7 @@ const moveTaskFromList = async (req, res) => {
   }
 };
 
-const dragTask = async (req, res) => {
+const joinOrLeaveTask = async (req, res) => {
   try {
     const task = await Task.findById(req.params.id);
     if (!task) {
@@ -934,50 +951,37 @@ const dragTask = async (req, res) => {
       });
     }
 
-    const list = await List.findById(req.body.listId);
-    if (!list) {
-      return res.status(404).json({
-        success: false,
-        message: 'List not found',
+    if (task.members.includes(req.user.id)) {
+      console.log(task.members);
+      task.members.pull(req.user.id);
+      await task.save();
+      const updatedTask = await Task.findById(req.params.id).populate(
+        'members'
+      );
+      return res.status(200).json({
+        success: true,
+        data: updatedTask,
+        message: 'You left the task',
+      });
+    }
+    if (!task.members.includes(req.user.id)) {
+      task.members.push(req.user.id);
+      await task.save();
+      const updatedTask = await Task.findById(req.params.id).populate(
+        'members'
+      );
+
+      return res.status(200).json({
+        success: true,
+        data: updatedTask,
+        message: 'You joined the task',
       });
     }
 
-    // Check project permissions
-    const project = await Project.findById(task.project);
-    const role = checkPermissions(project, req.user);
-    if (role === 'none') {
-      return res.status(403).json({
-        success: false,
-        message: 'You do not have permission to access this project',
-      });
-    }
-
-    // Check index in bounds
-    const currentList = await List.findById(task.list);
-    const currentListTasks = await Task.find({ list: currentList._id });
-    const currentIndex = currentListTasks.indexOf(task);
-
-    if (req.body.index > currentIndex) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid index',
-      });
-    }
-
-    // remove task from current list
-    currentList.tasks.pull(task._id);
-    await currentList.save();
-
-    // add task to new list
-    list.tasks.push(task._id);
-    await list.save();
-
-    task.list = req.body.listId;
-    await task.save();
     res.status(200).json({
       success: true,
-      data: task,
-      message: 'Task moved successfully',
+      data: updatedTask,
+      message: 'Task updated successfully',
     });
   } catch (error) {
     console.error(error);
@@ -1004,4 +1008,5 @@ module.exports = {
   addTaskRequirement,
   changeTaskStatus,
   moveTaskFromList,
+  joinOrLeaveTask,
 };
