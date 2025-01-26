@@ -34,4 +34,7 @@ router.put(
 // resetPassword
 router.put('/reset_password', userController.resetPassword);
 
+// delete user
+router.delete('/delete', authGuard, userController.deleteUser);
+
 module.exports = router;

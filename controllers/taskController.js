@@ -29,7 +29,7 @@ const createTask = async (req, res) => {
       });
     }
 
-    const role = checkPermissions(project, req.user);
+    const role = await checkPermissions(project, req.user);
     if (role === 'none') {
       return res.status(403).json({
         success: false,
@@ -86,7 +86,7 @@ const getTaskById = async (req, res) => {
 
     // Check project permissions
     const project = await Project.findById(task.project);
-    const role = checkPermissions(project, req.user);
+    const role = await checkPermissions(project, req.user);
     if (role === 'none') {
       return res.status(403).json({
         success: false,
@@ -128,7 +128,7 @@ const changeTaskName = async (req, res) => {
 
     // Check project permissions
     const project = await Project.findById(task.project);
-    const role = checkPermissions(project, req.user);
+    const role = await checkPermissions(project, req.user);
     if (role === 'none') {
       return res.status(403).json({
         success: false,
@@ -182,7 +182,7 @@ const changeTaskDesc = async (req, res) => {
 
     // Check project permissions
     const project = await Project.findById(task.project);
-    const role = checkPermissions(project, req.user);
+    const role = await checkPermissions(project, req.user);
     if (role === 'none') {
       return res.status(403).json({
         success: false,
@@ -228,7 +228,7 @@ const deleteTask = async (req, res) => {
 
     // Check project permissions
     const project = await Project.findById(task.project);
-    const role = checkPermissions(project, req.user);
+    const role = await checkPermissions(project, req.user);
     if (role === 'none') {
       return res.status(403).json({
         success: false,
@@ -280,7 +280,7 @@ const updateTaskDetails = async (req, res) => {
 
     // Check project permissions
     const project = await Project.findById(task.project);
-    const role = checkPermissions(project, req.user);
+    const role = await checkPermissions(project, req.user);
     if (role === 'none') {
       return res.status(403).json({
         success: false,
@@ -332,7 +332,7 @@ const assignTask = async (req, res) => {
 
     // Check project permissions
     const project = await Project.findById(task.project);
-    const role = checkPermissions(project, req.user);
+    const role = await checkPermissions(project, req.user);
     if (role === 'none') {
       return res.status(403).json({
         success: false,
@@ -402,7 +402,7 @@ const assignDate = async (req, res) => {
 
     // Check project permissions
     const project = await Project.findById(task.project);
-    const role = checkPermissions(project, req.user);
+    const role = await checkPermissions(project, req.user);
     if (role === 'none') {
       return res.status(403).json({
         success: false,
@@ -462,7 +462,7 @@ const changeTaskPriority = async (req, res) => {
 
     // Check project permissions
     const project = await Project.findById(task.project);
-    const role = checkPermissions(project, req.user);
+    const role = await checkPermissions(project, req.user);
     if (role === 'none') {
       return res.status(403).json({
         success: false,
@@ -516,7 +516,7 @@ const changeTaskLabel = async (req, res) => {
 
     // Check project permissions
     const project = await Project.findById(task.project);
-    const role = checkPermissions(project, req.user);
+    const role = await checkPermissions(project, req.user);
     if (role === 'none') {
       return res.status(403).json({
         success: false,
@@ -640,7 +640,7 @@ const updateCoverImage = async (req, res) => {
 
     // Check project permissions
     const project = await Project.findById(task.project);
-    const role = checkPermissions(project, req.user);
+    const role = await checkPermissions(project, req.user);
     if (role === 'none') {
       return res.status(403).json({
         success: false,
@@ -726,7 +726,7 @@ const addTaskRequirement = async (req, res) => {
 
     // Check project permissions
     const project = await Project.findById(task.project);
-    const role = checkPermissions(project, req.user);
+    const role = await checkPermissions(project, req.user);
     if (role === 'none') {
       return res.status(403).json({
         success: false,
@@ -888,7 +888,7 @@ const moveTaskFromList = async (req, res) => {
 
     // Check project permissions
     const project = await Project.findById(task.project);
-    const role = checkPermissions(project, req.user);
+    const role = await checkPermissions(project, req.user);
     if (role === 'none') {
       return res.status(403).json({
         success: false,

@@ -14,7 +14,12 @@ const checkPermissions = async (project, user) => {
     return 'admin';
   } else if (project.members.includes(user.id)) {
     return 'all';
+  } else if (project.requests.includes(user.id)) {
+    return 'pending';
+  } else if (project.members.some((m) => m._id.equals(user.id))) {
+    return 'member';
   }
+
   return 'none';
 };
 
@@ -140,8 +145,9 @@ const getProjectById = async (req, res) => {
       });
     }
 
-    const role = checkPermissions(project, req.user);
-    if (role === 'none' && project.isPrivate) {
+    const role = await checkPermissions(project, req.user);
+    console.log(role);
+    if (role === 'none') {
       return res.status(403).json({
         success: false,
         message: 'You do not have permission to view this project',
@@ -193,7 +199,7 @@ const addListToProject = async (req, res) => {
       });
     }
 
-    const role = checkPermissions(project, req.user);
+    const role = await checkPermissions(project, req.user);
     if (role === 'none') {
       return res.status(403).json({
         success: false,
@@ -351,7 +357,8 @@ const removeMember = async (req, res) => {
       });
     }
 
-    const role = checkPermissions(project, req.user);
+    const role = await checkPermissions(project, req.user);
+    console.log(role);
     if (role !== 'owner' && role !== 'admin') {
       return res.status(403).json({
         success: false,
@@ -384,6 +391,34 @@ const removeMember = async (req, res) => {
   }
 };
 
+// leaveProject
+const leaveProject = async (req, res) => {
+  try {
+    const project = await projectModel.findById(req.params.id);
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: 'Project not found',
+      });
+    }
+
+    project.members.pull(req.user.id);
+    project.admin.pull(req.user.id);
+    await project.save();
+
+    res.status(200).json({
+      success: true,
+      data: project,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+};
+
 const updateProject = async (req, res) => {
   const { name, permissions, isPrivate } = req.body;
 
@@ -396,7 +431,7 @@ const updateProject = async (req, res) => {
       });
     }
 
-    const role = checkPermissions(project, req.user);
+    const role = await checkPermissions(project, req.user);
     if (role !== 'owner' && role !== 'admin') {
       return res.status(403).json({
         success: false,
@@ -559,6 +594,15 @@ const getMembersRoleAndTask = async (req, res) => {
         .json({ success: false, message: 'Project not found' });
     }
 
+    // check if the user is a member of the project
+    const role = await checkPermissions(project, req.user);
+    if (role === 'none') {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not a member of this project',
+      });
+    }
+
     const members = project.members;
 
     // Fetch all tasks for this project in a single query
@@ -656,6 +700,58 @@ const fetchRequestedMembers = async (req, res) => {
   }
 };
 
+const acceptRequest = async (req, res) => {
+  try {
+    const project = await projectModel.findById(req.params.id);
+
+    if (!project) {
+      return res
+        .status(404)
+        .json({ success: false, message: 'Project not found' });
+    }
+
+    if (!project.requests.includes(req.body.id)) {
+      return res
+        .status(400)
+        .json({ success: false, message: 'Request not found' });
+    }
+
+    project.members.push(req.body.id);
+    project.requests.pull(req.body.id);
+
+    await project.save();
+    res.status(200).json({ success: true, data: project });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+const rejectRequest = async (req, res) => {
+  try {
+    const project = await projectModel.findById(req.params.id);
+
+    if (!project) {
+      return res
+        .status(404)
+        .json({ success: false, message: 'Project not found' });
+    }
+
+    if (!project.requests.includes(req.body.id)) {
+      return res
+        .status(400)
+        .json({ success: false, message: 'Request not found' });
+    }
+
+    project.requests.pull(req.body.id);
+    await project.save();
+    res.status(200).json({ success: true, data: project });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
 module.exports = {
   createProject,
   uploadImage,
@@ -677,4 +773,7 @@ module.exports = {
   getMembersRoleAndTask,
   requestAccess,
   fetchRequestedMembers,
+  acceptRequest,
+  rejectRequest,
+  leaveProject,
 };

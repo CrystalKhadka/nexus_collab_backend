@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
+const userModel = require('../models/userModel');
 
-const authGuard = (req, res, next) => {
+const authGuard = async (req, res, next) => {
   // Check incoming data
   console.log(req.headers);
 
@@ -28,6 +29,15 @@ const authGuard = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
+
+    // check if user exists
+    const user = await userModel.findById(req.user.id);
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
     next();
     // if verified : next(function in controller)
     // not verified : not authorized

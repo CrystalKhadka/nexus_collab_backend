@@ -6,6 +6,8 @@ const userSchema = require('../models/userModel');
 const path = require('path');
 const fs = require('fs');
 const sendPasswordResetEmail = require('../services/sendForgotPassEmail');
+const Project = require('../models/projectModel');
+const Task = require('../models/taskModel');
 
 const createUser = async (req, res) => {
   // 1. Check incoming data
@@ -288,14 +290,6 @@ const loginUser = async (req, res) => {
         message: 'User not found',
       });
     }
-    // Check if user is verified
-    if (!user.verifyStatus) {
-      return res.status(400).json({
-        success: false,
-        message: 'User is not verified',
-        isVerified: false,
-      });
-    }
 
     if (user.lockUntil > new Date()) {
       return res.status(400).json({
@@ -351,6 +345,15 @@ const loginUser = async (req, res) => {
     user.lockUntil = null;
     user.lockCount = 0;
     await user.save();
+
+    // Check if user is verified
+    if (!user.verifyStatus) {
+      return res.status(200).json({
+        success: false,
+        message: 'User is not verified',
+        isVerified: false,
+      });
+    }
 
     // 3. Generate JWT token
     const token = jwt.sign(
@@ -628,6 +631,22 @@ const resetPassword = async (req, res) => {
   }
 };
 
+const deleteUser = async (req, res) => {
+  try {
+    await userModel.findByIdAndDelete(req.user.id);
+    return res.status(200).json({
+      success: true,
+      message: 'User deleted successfully',
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+};
+
 // Exporting
 module.exports = {
   createUser,
@@ -641,4 +660,5 @@ module.exports = {
   sendForgotPasswordEmail,
   resetPassword,
   verifyForgotPasswordOTP,
+  deleteUser,
 };

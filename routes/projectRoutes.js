@@ -72,4 +72,16 @@ router.get(
   projectController.fetchRequestedMembers
 );
 
+// acceptRequest
+router.put('/accept_request/:id', authGuard, projectController.acceptRequest);
+
+// rejectRequest
+router.put('/reject_request/:id', authGuard, projectController.rejectRequest);
+
+// leaveProject
+router.put('/leave_project/:id', authGuard, projectController.leaveProject);
+
+// removeMember
+router.put('/remove_member/:id', authGuard, projectController.removeMember);
+
 module.exports = router;

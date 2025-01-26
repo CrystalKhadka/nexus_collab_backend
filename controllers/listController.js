@@ -29,7 +29,8 @@ const createList = async (req, res) => {
       });
     }
 
-    const role = checkPermissions(project, req.user);
+    const role = await checkPermissions(project, req.user);
+    console.log(role);
     if (role === 'none') {
       return res.status(403).json({
         success: false,
@@ -69,7 +70,7 @@ const getLists = async (req, res) => {
       });
     }
 
-    const role = checkPermissions(project, req.user);
+    const role = await checkPermissions(project, req.user);
     if (role === 'none') {
       return res.status(403).json({
         success: false,
@@ -106,7 +107,7 @@ const getList = async (req, res) => {
     }
 
     const project = await Project.findById(list.project);
-    const role = checkPermissions(project, req.user);
+    const role = await checkPermissions(project, req.user);
     if (role === 'none') {
       return res.status(403).json({
         success: false,
@@ -132,7 +133,7 @@ const moveTask = async (req, res) => {
     }
 
     const project = await Project.findById(list.project);
-    const role = checkPermissions(project, req.user);
+    const role = await checkPermissions(project, req.user);
     if (role === 'none') {
       return res.status(403).json({
         success: false,
@@ -171,7 +172,7 @@ const removeTaskFromList = async (req, res) => {
     }
 
     const project = await Project.findById(list.project);
-    const role = checkPermissions(project, req.user);
+    const role = await checkPermissions(project, req.user);
     if (role === 'none') {
       return res.status(403).json({
         success: false,
@@ -209,7 +210,7 @@ const editList = async (req, res) => {
     }
 
     const project = await Project.findById(list.project);
-    const role = checkPermissions(project, req.user);
+    const role = await checkPermissions(project, req.user);
     if (role === 'none') {
       return res.status(403).json({
         success: false,
