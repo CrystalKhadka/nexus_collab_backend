@@ -404,6 +404,19 @@ const leaveProject = async (req, res) => {
 
     project.members.pull(req.user.id);
     project.admin.pull(req.user.id);
+
+    // if no member are left in the project, delete the project
+    if (project.members.length === 0) {
+      await projectModel.findByIdAndDelete(req.params.id);
+      return res.status(200).json({
+        success: true,
+        message: 'Project deleted successfully',
+      });
+    }
+
+    // Set the owner of the project to the first member
+    project.owner = project.members[0];
+
     await project.save();
 
     res.status(200).json({

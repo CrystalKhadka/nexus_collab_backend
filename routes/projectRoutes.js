@@ -79,7 +79,7 @@ router.put('/accept_request/:id', authGuard, projectController.acceptRequest);
 router.put('/reject_request/:id', authGuard, projectController.rejectRequest);
 
 // leaveProject
-router.put('/leave_project/:id', authGuard, projectController.leaveProject);
+router.put('/leave/:id', authGuard, projectController.leaveProject);
 
 // removeMember
 router.put('/remove_member/:id', authGuard, projectController.removeMember);
